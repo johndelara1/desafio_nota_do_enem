@@ -2,7 +2,7 @@
 # Prevendo Notas de Matemática dos Participantes do ENEM
 
 # Configurando o diretório de trabalho
-setwd("C:/Users/Matilde/Dropbox/DESAFIO-Codenation(ENEM)/3-Arquivos-Cap11/Regressao-ENEM")
+setwd("C:/Users/Matilde/Dropbox/DESAFIO-Codenation(ENEM)/desafio_nota_do_enem")
 getwd()
 
 # Problema de Negócio: Previsão de Notas de Matemática dos participantes
@@ -11,9 +11,66 @@ getwd()
 # para um conjunto de participantes espalhados por 5 regiões do Brasil.
 # Esse dataset de treino possui 13.730 observações e 167 variáveis.
 
+
+#### TESTE #####
+#Transformar os dois datasets com as mesmas variáveis
+notateste <- read.csv("test.csv")
+library(dplyr)
+# Criar regioes com os estados por prova
+glimpse(notateste$SG_UF_RESIDENCIA)
+table(notateste$SG_UF_RESIDENCIA)
+x <- c(notateste$SG_UF_RESIDENCIA)
+lookup <- c( AC = "NORTE",  AL = "NORDESTE",  AM = "NORTE",  AP = "NORTE",  BA = "NORDESTE", CE = "NORDESTE", DF = "CENTRO-OESTE", ES = "SUDESTE", GO = "CENTRO-OESTE", MA = "NORDESTE", MG = "SUDESTE", MS = "CENTRO-OESTE", MT = "CENTRO-OESTE", PA = "NORTE", PB = "NORDESTE", PE = "NORDESTE", PI = "NORDESTE", PR = "SUL", RJ = "SUDESTE", RN = "NORDESTE", RO = "NORTE", RR = "NORTE", RS = "SUL", SC = "SUL", SE = "NORDESTE", SP = "SUDESTE", TO = "NORTE")
+uniao = lookup[x]
+regioes = unname(uniao)
+table(regioes)
+notateste$regioes = regioes
+table(notateste$regioes)
+names(table(notateste$regioes))
+
+# Criar vetor com nomes
+nomes = names(notateste)
+testando = notateste[c(nomes, "NU_INSCRICAO")]
+#testando = testando[c(nomes[-40:-47])]
+testando = testando[c(-25:-28)]
+testando = testando[c(-1)]
+testando = testando[c(-44)]
+
+# Abastecer de informações nossa base ----
+## LIMPEZA Retirando valores NA da tabela
+library(tidyr)
+# 13730*26.43/100 -> 3628.839 de dados, Sem valores NA dataset corresponde a 26.43%
+testando = testando %>% drop_na()
+
+# Transformar variaveis em numeric
+
+testando$SG_UF_RESIDENCIA = as.numeric(testando$SG_UF_RESIDENCIA)
+testando$TP_SEXO = as.numeric(testando$TP_SEXO)
+testando$regioes = as.factor(testando$regioes)
+testando$regioes = as.numeric(testando$regioes)
+testando$Q001 = as.numeric(testando$Q001)
+testando$Q002 = as.numeric(testando$Q002)
+testando$Q006 = as.numeric(testando$Q006)
+testando$Q024 = as.numeric(testando$Q024)
+testando$Q025 = as.numeric(testando$Q025)
+testando$Q026 = as.numeric(testando$Q026)
+testando$Q027 = as.numeric(testando$Q027)
+testando$Q047 = as.numeric(testando$Q047)
+
+names(testando[35:42])
+
+
+# Vizualizar se os dados estão em estado numérico para envolver no algoritmo
+glimpse(testando)
+names(glimpse(testando))
+summary(testando)
+nomes = names(testando)
+
+
+#### TREINO #####
 # Etapa 1 - Coletando os dados
 nota <- read.csv("train.csv")
-View(nota)
+#View(nota)
 
 # Etapa 2: Explorando e Preparando os Dados
 # Visualizando as variáveis
@@ -31,17 +88,7 @@ hist(nota$NU_NOTA_MT, main = 'Histograma', xlab = 'Notas')
 # Criar Tabela de contingência das regiões
 names(table(nota$SG_UF_RESIDENCIA))
 
-#Transformar os dois datasets com as mesmas variáveis
-notateste <- read.csv("test.csv", stringsAsFactors = FALSE)
-nomes = names(notateste)
-testando = nota[c(nomes)]
-names(notateste)
-names(testando)
-
-
-
 # Criar regioes com os estados por prova
-library(dplyr)
 #intalar pacote dplyr
 glimpse(nota$SG_UF_RESIDENCIA)
 table(nota$SG_UF_RESIDENCIA)
@@ -54,83 +101,40 @@ nota$regioes = regioes
 table(nota$regioes)
 names(table(nota$regioes))
 
+# Segmentando apenas os dados que temos no teste
+nota = nota[c(nomes, "NU_NOTA_MT")]
+treinando =  nota %>% drop_na()
+#treinando = treinando[c(-37)]
+treinando$SG_UF_RESIDENCIA = as.numeric(treinando$SG_UF_RESIDENCIA)
+treinando$TP_SEXO = as.numeric(treinando$TP_SEXO)
+treinando$regioes = as.factor(treinando$regioes)
+treinando$regioes = as.numeric(treinando$regioes)
+treinando$Q001 = as.numeric(treinando$Q001)
+treinando$Q002 = as.numeric(treinando$Q002)
+treinando$Q006 = as.numeric(treinando$Q006)
+treinando$Q024 = as.numeric(treinando$Q024)
+treinando$Q025 = as.numeric(treinando$Q025)
+treinando$Q026 = as.numeric(treinando$Q026)
+treinando$Q027 = as.numeric(treinando$Q027)
+treinando$Q047 = as.numeric(treinando$Q047)
+nota = treinando
+treinando = treinando[c(-1)]
 
-# Abastecer de informações nossa base ----
-
-## LIMPEZA Retirando valores NA da tabela
-library(tidyr)
-# 13730*71.50/100 -> Sem valores NA dataset corresponde a 71.501%
-testando = (testando %>% drop_na())
-
-
-## Mudar valores de fator para numerico
-testando1 = as.numeric(testando)
-
-
-# Transformar variável de sexo em número, onde masculino é = 2 e feminino igual a 1
-testando$TP_SEXO = as.numeric(as.factor(testando$TP_SEXO))
-
-# Transformar variável de regioes em número
-testando$regioes = as.numeric(as.factor(testando$regioes))
-
-
-
-# Vizualizar se os dados estão em estado numerico para envolver no algoritmo
-glimpse(testando)
-summary(testando)
-
-# Explorando relacionamento entre as variáveis: Matriz de Correlação
-cor(testando[c(nomes[1:10])])
-
-# Visualizando relacionamento entre as variáveis: Scatterplot
-# Perceba que não existe um claro relacionamento entre as variáveis
-pairs(testando[c(nomes[1:10])])
+glimpse(treinando)
 
 # Scatterplot Matrix
 #install.packages("psych")
 library(psych)
 
-# Este gráfico fornece mais informações sobre o relacionamento entre as variáveis
-pairs.panels(nota[c(nomes)])
-
 # Etapa 3: Treinando o Modelo (usando os dados de treino)
-modelo <- lm(NU_NOTA_MT ~ NU_IDADE + TP_SEXO + regioes, data = nota)
-
+modelo <- lm(NU_NOTA_MT ~ ., data = treinando)
 
 # Visualizando os coeficientes
 modelo
 
-# Prevendo nota de matemática
-
 # Aqui verificamos as notas previstas pelo modelo que devem ser iguais aos dados de treino
 previsao1 <- predict(modelo)
 View(previsao1)
-
-# Prevendo as notas de matemática com Dados de teste----
-
-
-# Criar regioes com os estados por prova
-glimpse(notateste$SG_UF_RESIDENCIA)
-table(notateste$SG_UF_RESIDENCIA)
-x <- c(notateste$SG_UF_RESIDENCIA)
-lookup <- c( AC = "NORTE",  AL = "NORDESTE",  AM = "NORTE",  AP = "NORTE",  BA = "NORDESTE", CE = "NORDESTE", DF = "CENTRO-OESTE", ES = "SUDESTE", GO = "CENTRO-OESTE", MA = "NORDESTE", MG = "SUDESTE", MS = "CENTRO-OESTE", MT = "CENTRO-OESTE", PA = "NORTE", PB = "NORDESTE", PE = "NORDESTE", PI = "NORDESTE", PR = "SUL", RJ = "SUDESTE", RN = "NORDESTE", RO = "NORTE", RR = "NORTE", RS = "SUL", SC = "SUL", SE = "NORDESTE", SP = "SUDESTE", TO = "NORTE")
-uniao = lookup[x]
-regioes = unname(uniao)
-table(regioes)
-notateste$regioes = regioes
-table(notateste$regioes)
-names(table(notateste$regioes))
-
-# Pegar apenas features iguais do dados de treino
-notateste = notateste[c("NU_IDADE", "TP_SEXO", "regioes")]
-
-
-
-View(notateste)
-previsao2 <- predict(modelo, notateste)
-View(previsao2)
-
-
 
 # Etapa 4: Avaliando a Performance do Modelo
 # Mais detalhes sobre o modelo
@@ -215,18 +219,21 @@ summary(modelo)
 # Lembre-se que correlação não implica causalidade
 
 
+# Prevendo as notas de matemática com Dados de teste----
 
 # Etapa 5: Otimizando a Performance do Modelo
 
 # Adicionando uma variável com o dobro do valor das idades
-nota$idade2 <- nota$NU_IDADE ^ 2
+treinando$idade2 <- treinando$NU_IDADE ^ 2
 
 # Criando o modelo final
-modelo_v2 <- lm(NU_NOTA_MT ~ NU_IDADE + idade2 + TP_SEXO * regioes, data = nota)
+modelo_v2 <- lm(NU_NOTA_MT ~ . * idade2 * TP_SEXO * regioes * TP_DEPENDENCIA_ADM_ESC * 
+                  TP_ESCOLA + TP_SEXO * IN_SABATISTA * NU_NOTA_CN * NU_NOTA_CH * NU_NOTA_LC * TP_STATUS_REDACAO * NU_NOTA_COMP2 * regioes, data = treinando)
 
 summary(modelo_v2)
 
 # Dados de teste
+glimpse(treinando)
 notateste <- read.csv("test.csv")
 View(notateste)
 previsao <- predict(modelo, notateste)
