@@ -31,9 +31,9 @@ PIB_2016 <- read_excel("PIB-2016.xls")
 PIB_2016 = PIB_2016 %>% filter(Ano == 2016)
 PIB_2016 = PIB_2016[c(names(PIB_2016)[5], names(PIB_2016)[42])]
 MEDIA_PIB_2016 = aggregate(PIB_2016$`Produto Interno Bruto per capita
-(R$ 1,00)`, 
-          by=list(PIB_2016$`Sigla da Unidade da Federação`),
-          FUN = mean)
+                           (R$ 1,00)`, 
+                           by=list(PIB_2016$`Sigla da Unidade da Federação`),
+                           FUN = mean)
 colnames(MEDIA_PIB_2016) = c("SG_UF_RESIDENCIA","media")
 
 # Criar regioes com os estados por prova
@@ -147,9 +147,8 @@ testando$CO_PROVA_LC = as.numeric(testando$CO_PROVA_LC)
 testando$CO_PROVA_MT = as.numeric(testando$CO_PROVA_MT)
 testando$regioes = as.factor(testando$regioes)
 testando$regioes = as.numeric(testando$regioes)
-testando = testando[c(-1)]
 notateste = testando
-testando = testando[c(-1)]
+testando$NU_INSCRICAO = NULL
 
 
 # Vizualizar se os dados estão em estado numérico para envolver no algoritmo
@@ -186,14 +185,14 @@ trainset = treinando
 testset = testando
 
 
-modelo_rf_v1 = rpart(NU_NOTA_MT ~ ., data = trainset, control = rpart.control( cp = .0006)) 
+modelo_rf_v1 = rpart(NU_NOTA_MT ~ ., data = trainset, control = rpart.control( cp = .0009999999)) 
 summary(modelo_rf_v1)
 
 # Previsões nos dados de teste
 tree_pred = predict(modelo_rf_v1, testset)
 
-enviotree = notateste[1]
+enviotree = data.frame(notateste$NU_INSCRICAO)
+colnames(enviotree) = c("NU_INSCRICAO")
 enviotree$NU_NOTA_MT = tree_pred
 
 write.csv(enviotree, "answer.csv", row.names = FALSE)
-
