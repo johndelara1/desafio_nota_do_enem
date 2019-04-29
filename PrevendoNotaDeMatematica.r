@@ -22,6 +22,12 @@ library(DT)           # Tabelas Editáveis
 # Etapa 1 - Coletando os dados
 nota <- fread("train.csv")
 notateste <- fread("test.csv")
+
+
+# ****************************************************
+# ***                   INCLUIR                    ***
+# ***                NOVAS VARIÁVEIS               ***
+# ****************************************************
 macro <- read_excel("macro.xls")
 x <- c(macro$`UF [-]`)
 lookup <- c(Acre = "AC",  Alagoas = "AL",  Amazonas = "AM",  Amapá = "AP",  Bahia = "BA", Ceará = "CE", `Distrito Federal` = "DF", `Espírito Santo` = "ES", Goiás = "GO", Maranhão = "MA", `Minas Gerais` = "MG", `Mato Grosso do Sul` = "MS", `Mato Grosso` = "MT", Pará = "PA", Paraíba = "PB", Pernambuco = "PE", Piauí = "PI", Paraná = "PR", `Rio de Janeiro` = "RJ", `Rio Grande do Norte` = "RN", Rondônia = "RO", Roraima = "RR",`Rio Grande do Sul` =  "RS", `Santa Catarina` =  "SC", Sergipe = "SE", `São Paulo` = "SP", Tocantins = "TO")
@@ -34,19 +40,19 @@ names(macro)
 colnames(macro) = c("Area_territorial_2018", "Pop_estimada_2018","Dens_demografica_2010","Matriculas_ensino_fundamental_2017","IDH_2010","Receitas_2017","Despesas_empenhadas_2017","Rend_domiciliar_2017_Percapita","Total_de_Veiculos_2016","SG_UF_RESIDENCIA")
 
 
-#PIB_2016 <- read_excel("PIB-2016.xls")
-nomes <- names(notateste)
+PIB_2016 <- read_excel("PIB-2016.xls")
 
-# ****************************************************
-# ***                   INCLUIR                    ***
-# ***                NOVAS VARIÁVEIS               ***
-# ****************************************************
-#média do pib por estado
-#PIB_2016 = PIB_2016 %>% filter(Ano == 2016)
-#PIB_2016 = PIB_2016[c(names(PIB_2016)[5], names(PIB_2016)[42])]
-#SOMA_PIB_2016 = aggregate(PIB_2016$`Produto Interno Bruto per capita (R$ 1,00)`, by=list(PIB_2016$`Sigla da Unidade da Federação`), FUN = sum)
+
+nomes <- names(notateste)
+#soma do pib por estado
+PIB_2016 = PIB_2016 %>% filter(Ano == 2016)
+PIB_2016 = PIB_2016[c(names(PIB_2016)[5], names(PIB_2016)[42])]
+SOMA_PIB_2016 = aggregate(PIB_2016$`Produto Interno Bruto per capita
+(R$ 1,00)`, by=list(PIB_2016$`Sigla da Unidade da Federação`), FUN = sum)
 #DT::datatable(SOMA_PIB_2016, editable = TRUE)
-#colnames(SOMA_PIB_2016) = c("SG_UF_RESIDENCIA","media")
+colnames(SOMA_PIB_2016) = c("SG_UF_RESIDENCIA","media")
+lookup <- c( AC = "13.751",  AL = "49.456",  AP = "14.339",  AM = "89.017 ",  BA = "258.649", CE = "138.379", DF = "235.497", ES = "109.227", GO = "181.692", MA = "85.286", MT = "123.834", MS = "91.866", MG = "544.634", PR = "401.662", PB = "59.089", PA = "138.068", PE = "167.290", PI = "41.406", RJ = "640.186", RN = "59.661", RS = "408.645", RO = "39.451", RR = "11.011", SC = "256.661", SE = "38.867", SP = "2.038.005", TO = "31.576")
+SOMA_PIB_2016$media = lookup
 
 # Criar regioes com os estados por prova
 glimpse(notateste$SG_UF_RESIDENCIA)
@@ -62,6 +68,7 @@ names(table(notateste$regioes))
 
 #Transformar os dois datasets com as mesmas variáveis
 notateste = merge(notateste,SOMA_PIB_2016)
+notateste = merge(macro, notateste)
 nomes <- names(notateste)
 
 
@@ -79,7 +86,8 @@ table(nota$regioes)
 names(table(nota$regioes))
 
 #Transformar os dois datasets com as mesmas variáveis
-nota = merge(nota,SOMA_PIB_2016)
+nota = merge(nota, SOMA_PIB_2016)
+nota = merge(macro, nota)
 
 
 
@@ -461,7 +469,7 @@ trainset = treinando
 testset = testando
 
 
-modelo_rf_v1 = rpart(NU_NOTA_MT ~ ., data = trainset, control = rpart.control( cp = .000999999999)) 
+modelo_rf_v1 = rpart(NU_NOTA_MT ~ ., data = trainset, control = rpart.control( cp = .00099999999999)) 
 #summary(modelo_rf_v1)
 
 # Previsões nos dados de teste
