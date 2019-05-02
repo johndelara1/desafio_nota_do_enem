@@ -5,17 +5,17 @@
 setwd("C:/Users/Matilde/Dropbox/DESAFIO-Codenation(ENEM)/desafio_nota_do_enem")
 getwd()
 
-library(dplyr)     # Filtragens
-library(psych)     # Scatterplot Matrix
-library(e1071)     # SVM
-library(rpart)     # RANDON FOREST
-require(randomForest)
-library(readr)     # GERAR CSV
-library(tidyverse) # Drop_NA()
-library(readxl)    # Importar xls
-#library(catboost)  # Algoritmo de boost
-#library(devtools)  # Github
-#devtools::install_github('catboost/catboost', subdir = 'catboost/R-package')
+library(dplyr)        # Filtragens
+library(psych)        # Scatterplot Matrix
+library(e1071)        # SVM
+library(rpart)        # decision tree
+require(randomForest) # RANDON FOREST
+library(readr)        # GERAR CSV
+library(tidyverse)    # Drop_NA()
+library(readxl)       # Importar xls
+#library(catboost)    # Algoritmo de boost
+#library(devtools)    # Github
+#devtools::install_   github('catboost/catboost', subdir = 'catboost/R-package')
 
 # ****************************************************
 # ***                   DADOS                      ***
@@ -35,7 +35,7 @@ TP_DEPENDENCIA_ADM_ESC
 PIB_2016 = PIB_2016 %>% filter(Ano == 2016)
 PIB_2016 = PIB_2016[c(names(PIB_2016)[5], names(PIB_2016)[42])]
 SOMA_PIB_2016 = aggregate(PIB_2016$`Produto Interno Bruto per capita
-                           (R$ 1,00)`, 
+(R$ 1,00)`, 
                            by=list(PIB_2016$`Sigla da Unidade da Federação`),
                            FUN = sum)
 colnames(SOMA_PIB_2016) = c("SG_UF_RESIDENCIA","media")
@@ -119,7 +119,10 @@ treinando$NU_INSCRICAO = NULL
 treinando$TP_LINGUA = NULL
 treinando$CO_PROVA_CH = NULL
 treinando$TP_COR_RACA = NULL
-
+treinando$idade2 = treinando$NU_IDADE *2
+treinando$media = as.factor(treinando$media)
+treinando$media = as.numeric(treinando$media)
+treinando$teste = treinando$NU_NOTA_CN + treinando$NU_NOTA_CN
 
 glimpse(treinando)
 
@@ -163,6 +166,10 @@ testando$NU_INSCRICAO = NULL
 testando$TP_LINGUA = NULL
 testando$CO_PROVA_CH = NULL
 testando$TP_COR_RACA = NULL
+testando$idade2 = testando$NU_IDADE *2
+testando$media = as.factor(testando$media)
+testando$media = as.numeric(testando$media)
+testando$teste = testando$NU_NOTA_CN + testando$NU_NOTA_LC
 
 # Vizualizar se os dados estão em estado numérico para envolver no algoritmo
 glimpse(testando)
@@ -174,44 +181,49 @@ glimpse(testando)
 
 ##Regressão linear múltipla
 # Etapa 3: Treinando o Modelo (usando os dados de treino)
-modelo <- lm(NU_NOTA_MT ~ ., data = treinando)
+modeloLM <- lm(NU_NOTA_MT ~ ., data = treinando)
 
 # Visualizando os coeficientes
-modelo
+modeloLM
 
 previsao1 <- predict(modelo, testando)
-View(previsao1)
+#View(previsao1)
 
 #treinando$Prev = previsao1
 
 # Etapa 4: Avaliando a Performance do Modelo
 # Mais detalhes sobre o modelo
-summary(modelo)
+summary(modeloLM)
 ####### -> 48%
 
 
 # Lembre-se que correlação não implica causalidade
 
 
-#### RANDONFOREST (Arvores de decisão) ####
+#### Variáveis ####
 trainset = treinando
 testset = testando
 
-# Modelo Tradicional
+#### Arvore de decisão ####
 modelo_rf_v1 = rpart(NU_NOTA_MT ~ ., data = trainset, control = rpart.control( cp = .000999999999999999)) 
-summary(modelo_rf_v1)
+#summary(modelo_rf_v1)
 
+modelo_rf_v1
 
-#Modelo Melhorado Ideal 600|40
-model <- randomForest(NU_NOTA_MT ~ ., 
-                      data = trainset, 
-                      ntree = 600,
-                      nodesize = 50)
+##FILTER SELECTION
+#Modelo Melhorado Ideal 600|50
+modelo <- randomForest(NU_NOTA_MT ~ . , 
+                       data = trainset, 
+                       ntree = 600, 
+                       nodesize = 52,
+                       importance = TRUE)
+summary(modelo)
+
 #print(model)
 names(trainset)
 
 # Previsões nos dados de teste
-tree_pred = predict(model, testset)
+tree_pred = predict(modelo, testset)
 
 enviotree = data.frame(notateste$NU_INSCRICAO)
 colnames(enviotree) = c("NU_INSCRICAO")
@@ -220,15 +232,45 @@ enviotree$NU_NOTA_MT = tree_pred
 write.csv(enviotree, "answer.csv", row.names = FALSE)
 
 
+#### Gradiente boosting ####
+require(gbm)
+modelo.boost=gbm(NU_NOTA_MT ~ . ,data = trainset,distribution = "gaussian",n.trees = 10000,
+                 shrinkage = 0.01, interaction.depth = 4)
+modelo.boost
 
-##FILTER SELECTION
-modelo <- randomForest(NU_NOTA_MT ~ . , 
-                       data = trainset, 
-                       ntree = 600, 
-                       nodesize =30,
-                       importance = TRUE)
+summary(modelo.boost) #Summary gives a table of Variable Importance and a plot of Variable Importance
 
-#Variáveis mais relevantes Importância das feautures
+
+n.trees = seq(from=100 ,to=10000, by=100) #no of trees-a vector of 100 values 
+
+# Previsões nos dados de teste
+predmatrix <- predict(modelo.boost,testset,n.trees = n.trees)
+dim(predmatrix) #dimentions of the Prediction Matrix
+
+#Calculating The Mean squared Test Error
+test.error<-with(testset,apply( (predmatrix-medv)^2,2,mean))
+head(test.error) #contains the Mean squared test error for each of the 100 trees averaged
+
+#Plotting the test error vs number of trees
+
+plot(n.trees , test.error , pch=19,col="blue",xlab="Number of Trees",ylab="Test Error", main = "Perfomance of Boosting on Test Set")
+
+#adding the RandomForests Minimum Error line trained on same data and similar parameters
+abline(h = min(test.err),col="red") #test.err is the test error of a Random forest fitted on same data
+legend("topright",c("Minimum Test error Line for Random Forests"),col="red",lty=1,lwd=1)
+
+
+#93.64 peguei coluna AJ
+
+envioboost = data.frame(notateste$NU_INSCRICAO)
+colnames(envioboost) = c("NU_INSCRICAO")
+envioboost$NU_NOTA_MT = predmatrix
+
+write.csv(envioboost, "answer.csv", row.names = FALSE)
+
+
+
+#Variáveis mais relevantes Importância das feautures####
 library(ggpubr)
 importancia_pred <- as.data.frame(importance(modelo, scale = TRUE))
 importancia_pred <- rownames_to_column(importancia_pred, var = "variable")
@@ -250,3 +292,12 @@ p2 <- ggplot(data = importancia_pred, aes(x = reorder(variable, IncNodePurity),
   theme_bw() +
   theme(legend.position = "bottom")
 ggarrange(p1, p2)
+
+
+oob_mse <- data.frame(oob_mse = modelo$mse,
+                      arvores = seq_along(modelo$mse))
+ggplot(data = oob_mse, aes(x = arvores, y = oob_mse )) +
+  geom_line() +
+  labs(title = "Evolução do out-of-bag-error vs número árvores",
+       x = "nº árvores") +
+  theme_bw()
